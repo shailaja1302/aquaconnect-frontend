@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const BASE_URL = process.env.REACT_APP_API_URL || "https://aquaconnect-backend-bd5g.onrender.com/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -13,16 +13,31 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const complaintAPI = {
   submit: (data) => api.post("/complaints", data),
-  getAll: () => api.get("/complaints"),
+  getAll: (params) => api.get("/complaints", { params }),
   getById: (id) => api.get(`/complaints/${id}`),
-  getByArea: (area) => api.get(`/complaints?area=${area}`),
+  getMyComplaints: () => api.get("/complaints/my"),
+  updateStatus: (id, status) => api.put(`/complaints/${id}/status`, { status }),
+  getStats: () => api.get("/complaints/stats"),
 };
 
 export const authAPI = {
   login: (data) => api.post("/auth/login", data),
   register: (data) => api.post("/auth/register", data),
+  getMe: () => api.get("/auth/me"),
   sendOTP: (aadhaar) => api.post("/auth/send-otp", { aadhaar }),
   verifyOTP: (aadhaar, otp) => api.post("/auth/verify-otp", { aadhaar, otp }),
 };
@@ -30,6 +45,7 @@ export const authAPI = {
 export const waterAPI = {
   getSupplyStatus: () => api.get("/water/supply"),
   getQualityReports: () => api.get("/water/quality"),
+  updateSupplyStatus: (data) => api.post("/water/supply", data),
 };
 
 export default api;

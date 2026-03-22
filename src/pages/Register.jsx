@@ -1,3 +1,4 @@
+import { authAPI } from "../services/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -63,20 +64,29 @@ export default function Register() {
     else if (step === 2 && validateStep2()) setStep(3);
   };
 
-  const handleRegister = () => {
+ const handleRegister = async () => {
     if (!form.otp || form.otp.length < 4) {
       setErrors({ otp: "Enter the OTP sent to your Aadhaar-linked mobile" });
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      // TODO Week 6: replace with real API → authAPI.register(form)
-      login({ name: form.name, phone: form.phone, area: form.area }, "mock-jwt-token");
-      setLoading(false);
+    try {
+      const res = await authAPI.register({
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        password: form.password,
+        area: form.area,
+        aadhaar: form.aadhaar
+      });
+      login(res.data.user, res.data.token);
       navigate("/");
-    }, 1500);
+    } catch (err) {
+      setErrors({ otp: err.response?.data?.message || "Registration failed. Try again." });
+    } finally {
+      setLoading(false);
+    }
   };
-
   const inputStyle = (field) => ({
     width: "100%",
     padding: "10px 14px",

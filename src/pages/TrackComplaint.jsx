@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { mockComplaints } from "../data/mockData";
+import { complaintAPI } from "../services/api";
 
-// Fix leaflet marker icon issue in React
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -16,35 +15,28 @@ L.Icon.Default.mergeOptions({
 const STAGES = ["Registered", "Assigned", "Field Visit", "Resolved"];
 
 const STAGE_STYLE = {
-  Registered: { color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0" },
-  Assigned:   { color: "#f59e0b", bg: "#fff7ed", border: "#fed7aa" },
+  Registered:    { color: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0" },
+  Assigned:      { color: "#f59e0b", bg: "#fff7ed", border: "#fed7aa" },
   "Field Visit": { color: "#3b82f6", bg: "#eff6ff", border: "#bfdbfe" },
-  Resolved:   { color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0" },
+  Resolved:      { color: "#22c55e", bg: "#f0fdf4", border: "#bbf7d0" },
 };
-
-// Hyderabad coordinates for each area
-const AREA_COORDS = {
-  Kukatpally:    [17.4947, 78.3996],
-  Madhapur:      [17.4474, 78.3762],
-  Ameerpet:      [17.4374, 78.4487],
-  KPHB:          [17.4968, 78.3893],
-  Gachibowli:    [17.4401, 78.3489],
-  "Hitech City": [17.4504, 78.3808],
-  "Banjara Hills": [17.4138, 78.4480],
-};
-
-// Extend mock data with coordinates
-const complaintsWithCoords = mockComplaints.map(c => ({
-  ...c,
-  coords: AREA_COORDS[c.area] || [17.3850, 78.4867],
-}));
 
 const TYPE_COLORS = {
-  Shortage:      "#ef4444",
-  Leakage:       "#3b82f6",
-  Contamination: "#f59e0b",
+  Shortage:       "#ef4444",
+  Leakage:        "#3b82f6",
+  Contamination:  "#f59e0b",
   "Low Pressure": "#8b5cf6",
-  Other:         "#64748b",
+  Other:          "#64748b",
+};
+
+const AREA_COORDS = {
+  Kukatpally:      [17.4947, 78.3996],
+  Madhapur:        [17.4474, 78.3762],
+  Ameerpet:        [17.4374, 78.4487],
+  KPHB:            [17.4968, 78.3893],
+  Gachibowli:      [17.4401, 78.3489],
+  "Hitech City":   [17.4504, 78.3808],
+  "Banjara Hills": [17.4138, 78.4480],
 };
 
 export default function TrackComplaint() {
@@ -52,15 +44,50 @@ export default function TrackComplaint() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("track");
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [mapLoading, setMapLoading] = useState(false);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!query.trim()) return;
-    const found = complaintsWithCoords.find(
-      c => String(c.id) === query.trim()
-    );
-    if (found) { setResult(found); setNotFound(false); }
-    else { setResult(null); setNotFound(true); }
+    setLoading(true);
+    setNotFound(false);
+    setResult(null);
+    try {
+      const res = await complaintAPI.getById(query.trim());
+      const complaint = res.data.complaint;
+      const coords = AREA_COORDS[complaint.area] || [17.3850, 78.4867];
+      setResult({ ...complaint, coords });
+      setNotFound(false);
+    } catch (err) {
+      setResult(null);
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMapComplaints = async () => {
+    if (allComplaints.length > 0) return;
+    setMapLoading(true);
+    try {
+      const res = await complaintAPI.getAll();
+      const withCoords = res.data.complaints.map(c => ({
+        ...c,
+        coords: AREA_COORDS[c.area] || [17.3850, 78.4867],
+      }));
+      setAllComplaints(withCoords);
+    } catch (err) {
+      console.error("Failed to load complaints for map");
+    } finally {
+      setMapLoading(false);
+    }
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === "map") loadMapComplaints();
   };
 
   const currentStage = result ? STAGES.indexOf(result.status) : -1;
@@ -92,7 +119,7 @@ export default function TrackComplaint() {
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               style={{
                 padding: "8px 20px",
                 borderRadius: 8,
@@ -117,7 +144,7 @@ export default function TrackComplaint() {
             <div style={{ background: "#fff", borderRadius: 12, padding: 24, border: "1px solid #e2e8f0", marginBottom: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Enter Complaint ID</h3>
               <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-                Try IDs: <strong>1</strong>, <strong>2</strong>, <strong>3</strong> or <strong>4</strong>
+                Enter the complaint ID you received after submitting
               </p>
               <div style={{ display: "flex", gap: 10 }}>
                 <input
@@ -129,14 +156,15 @@ export default function TrackComplaint() {
                 />
                 <button
                   onClick={handleSearch}
-                  style={{ padding: "10px 24px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                  Search
+                  disabled={loading}
+                  style={{ padding: "10px 24px", background: loading ? "#7dd3fc" : "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer" }}>
+                  {loading ? "Searching..." : "Search"}
                 </button>
               </div>
               {notFound && (
                 <div style={{ marginTop: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: 12 }}>
                   <p style={{ color: "#dc2626", fontSize: 13, margin: 0 }}>
-                    No complaint found with ID #{query}. Please check the ID and try again.
+                    No complaint found with ID #{query}. Please check and try again.
                   </p>
                 </div>
               )}
@@ -168,7 +196,7 @@ export default function TrackComplaint() {
                     {[
                       { label: "Type", value: result.type },
                       { label: "Area", value: result.area },
-                      { label: "Filed on", value: result.date },
+                      { label: "Filed on", value: new Date(result.created_at).toLocaleDateString("en-IN") },
                       { label: "Priority", value: result.type === "Contamination" ? "High" : "Normal" },
                     ].map(item => (
                       <div key={item.label} style={{ background: "#f8fafc", borderRadius: 8, padding: 12 }}>
@@ -192,7 +220,6 @@ export default function TrackComplaint() {
                       const st = STAGE_STYLE[stage];
                       return (
                         <div key={stage} style={{ flex: 1, position: "relative" }}>
-                          {/* Connector line */}
                           {i < STAGES.length - 1 && (
                             <div style={{
                               position: "absolute",
@@ -224,7 +251,7 @@ export default function TrackComplaint() {
                   </div>
                 </div>
 
-                {/* Mini Map for this complaint */}
+                {/* Mini Map */}
                 <div style={{ background: "#fff", borderRadius: 12, padding: 24, border: "1px solid #e2e8f0" }}>
                   <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Complaint Location</h3>
                   <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>{result.area}, Hyderabad</p>
@@ -278,75 +305,105 @@ export default function TrackComplaint() {
 
             {/* Full Map */}
             <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-              <div style={{ height: 520 }}>
-                <MapContainer
-                  center={[17.4474, 78.3762]}
-                  zoom={12}
-                  style={{ height: "100%", width: "100%" }}
-                  scrollWheelZoom={true}
-                >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; OpenStreetMap contributors'
-                  />
-                  {complaintsWithCoords.map(c => (
-                    <div key={c.id}>
-                      <Marker position={c.coords}>
-                        <Popup>
-                          <div style={{ minWidth: 160 }}>
-                            <p style={{ fontWeight: 700, margin: "0 0 4px", fontSize: 14 }}>#{c.id} — {c.type}</p>
-                            <p style={{ margin: "0 0 2px", fontSize: 12, color: "#64748b" }}>Area: {c.area}</p>
-                            <p style={{ margin: "0 0 2px", fontSize: 12, color: "#64748b" }}>Date: {c.date}</p>
-                            <p style={{ margin: "0 0 6px", fontSize: 12, color: "#64748b" }}>{c.description}</p>
-                            <span style={{
-                              fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
-                              background: STAGE_STYLE[c.status]?.bg,
-                              color: STAGE_STYLE[c.status]?.color,
-                            }}>
-                              {c.status}
-                            </span>
-                          </div>
-                        </Popup>
-                      </Marker>
-                      <Circle
-                        center={c.coords}
-                        radius={300}
-                        color={TYPE_COLORS[c.type] || "#0ea5e9"}
-                        fillOpacity={0.2}
-                      />
-                    </div>
-                  ))}
-                </MapContainer>
-              </div>
+              {mapLoading ? (
+                <div style={{ height: 520, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <p style={{ color: "#64748b", fontSize: 14 }}>Loading map data...</p>
+                </div>
+              ) : (
+                <div style={{ height: 520 }}>
+                  <MapContainer
+                    center={[17.4474, 78.3762]}
+                    zoom={12}
+                    style={{ height: "100%", width: "100%" }}
+                    scrollWheelZoom={true}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; OpenStreetMap contributors'
+                    />
+                    {allComplaints.map(c => (
+                      <div key={c.id}>
+                        <Marker position={c.coords}>
+                          <Popup>
+                            <div style={{ minWidth: 160 }}>
+                              <p style={{ fontWeight: 700, margin: "0 0 4px", fontSize: 14 }}>#{c.id} — {c.type}</p>
+                              <p style={{ margin: "0 0 2px", fontSize: 12, color: "#64748b" }}>Area: {c.area}</p>
+                              <p style={{ margin: "0 0 2px", fontSize: 12, color: "#64748b" }}>Date: {new Date(c.created_at).toLocaleDateString("en-IN")}</p>
+                              <p style={{ margin: "0 0 6px", fontSize: 12, color: "#64748b" }}>{c.description}</p>
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
+                                background: STAGE_STYLE[c.status]?.bg,
+                                color: STAGE_STYLE[c.status]?.color,
+                              }}>
+                                {c.status}
+                              </span>
+                            </div>
+                          </Popup>
+                        </Marker>
+                        <Circle
+                          center={c.coords}
+                          radius={300}
+                          color={TYPE_COLORS[c.type] || "#0ea5e9"}
+                          fillOpacity={0.2}
+                        />
+                      </div>
+                    ))}
+                  </MapContainer>
+                </div>
+              )}
             </div>
 
-            {/* Complaints List below map */}
-            <div style={{ background: "#fff", borderRadius: 12, padding: 24, border: "1px solid #e2e8f0", marginTop: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>All Active Complaints</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-                {complaintsWithCoords.map(c => {
-                  const st = STAGE_STYLE[c.status];
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => { setQuery(String(c.id)); setActiveTab("track"); handleSearch(); }}
-                      style={{ background: "#f8fafc", borderRadius: 10, padding: 14, border: "1px solid #e2e8f0", cursor: "pointer" }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = "#0ea5e9"}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = "#e2e8f0"}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#0ea5e9" }}>#{c.id}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: st?.bg, color: st?.color }}>
-                          {c.status}
-                        </span>
+            {/* Complaints List */}
+            {allComplaints.length > 0 && (
+              <div style={{ background: "#fff", borderRadius: 12, padding: 24, border: "1px solid #e2e8f0", marginTop: 20 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
+                  All Complaints ({allComplaints.length})
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+                  {allComplaints.map(c => {
+                    const st = STAGE_STYLE[c.status];
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setQuery(String(c.id));
+                          setActiveTab("track");
+                          setTimeout(() => handleSearch(), 100);
+                        }}
+                        style={{ background: "#f8fafc", borderRadius: 10, padding: 14, border: "1px solid #e2e8f0", cursor: "pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = "#0ea5e9"}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = "#e2e8f0"}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#0ea5e9" }}>#{c.id}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: st?.bg, color: st?.color }}>
+                            {c.status}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{c.type}</p>
+                        <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
+                          {c.area} · {new Date(c.created_at).toLocaleDateString("en-IN")}
+                        </p>
                       </div>
-                      <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px" }}>{c.type}</p>
-                      <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>{c.area} · {c.date}</p>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Empty state */}
+            {!mapLoading && allComplaints.length === 0 && (
+              <div style={{ background: "#fff", borderRadius: 12, padding: 40, border: "1px solid #e2e8f0", marginTop: 20, textAlign: "center" }}>
+                <p style={{ fontSize: 36, marginBottom: 12 }}>🗺️</p>
+                <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>No complaints yet</p>
+                <p style={{ fontSize: 14, color: "#64748b", marginBottom: 20 }}>Be the first to report a water issue in your area</p>
+                <button
+                  onClick={() => navigate("/submit")}
+                  style={{ padding: "10px 24px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                  Report an Issue
+                </button>
+              </div>
+            )}
 
           </div>
         )}
