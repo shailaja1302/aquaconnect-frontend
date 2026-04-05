@@ -9,6 +9,7 @@ import WaterQuality from "./pages/WaterQuality";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Chatbot from "./components/Chatbot";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -16,21 +17,45 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Navbar />
         <Routes>
-          <Route path="/" element={<Home />} />
+          {/* Public routes - no navbar, no protection */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Protected routes - require login */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Navbar />
+              <Home />
+            </ProtectedRoute>
+          } />
           <Route path="/submit" element={
-            <ProtectedRoute><SubmitComplaint /></ProtectedRoute>
+            <ProtectedRoute>
+              <Navbar />
+              <SubmitComplaint />
+            </ProtectedRoute>
           } />
           <Route path="/track" element={
-            <ProtectedRoute><TrackComplaint /></ProtectedRoute>
+            <ProtectedRoute>
+              <Navbar />
+              <TrackComplaint />
+            </ProtectedRoute>
           } />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/water-quality" element={<WaterQuality />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Navbar />
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/water-quality" element={
+            <ProtectedRoute>
+              <Navbar />
+              <WaterQuality />
+            </ProtectedRoute>
+          } />
         </Routes>
         <ToastContainer position="top-right" autoClose={3000} />
+        <Chatbot />
       </BrowserRouter>
     </AuthProvider>
   );
