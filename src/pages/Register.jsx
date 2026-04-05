@@ -1,7 +1,7 @@
-import { authAPI } from "../services/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { authAPI } from "../services/api";
 
 const HYDERABAD_AREAS = [
   "Kukatpally", "Madhapur", "Ameerpet", "KPHB",
@@ -64,7 +64,7 @@ export default function Register() {
     else if (step === 2 && validateStep2()) setStep(3);
   };
 
- const handleRegister = async () => {
+  const handleRegister = async () => {
     if (!form.otp || form.otp.length < 4) {
       setErrors({ otp: "Enter the OTP sent to your Aadhaar-linked mobile" });
       return;
@@ -80,13 +80,14 @@ export default function Register() {
         aadhaar: form.aadhaar
       });
       login(res.data.user, res.data.token);
-      navigate("/");
+      navigate("/home");
     } catch (err) {
       setErrors({ otp: err.response?.data?.message || "Registration failed. Try again." });
     } finally {
       setLoading(false);
     }
   };
+
   const inputStyle = (field) => ({
     width: "100%",
     padding: "10px 14px",
@@ -156,7 +157,7 @@ export default function Register() {
             ))}
           </div>
 
-          {/* Step 1 — Personal Info */}
+          {/* Step 1 */}
           {step === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Personal Information</h2>
@@ -164,62 +165,38 @@ export default function Register() {
 
               <div>
                 <label style={labelStyle}>Full Name *</label>
-                <input
-                  style={inputStyle("name")}
-                  placeholder="e.g. Rahul Sharma"
-                  value={form.name}
-                  onChange={e => update("name", e.target.value)}
-                />
+                <input style={inputStyle("name")} placeholder="e.g. Rahul Sharma" value={form.name} onChange={e => update("name", e.target.value)} />
                 {errors.name && <p style={errorStyle}>{errors.name}</p>}
               </div>
 
               <div>
                 <label style={labelStyle}>Mobile Number *</label>
-                <input
-                  style={inputStyle("phone")}
-                  placeholder="e.g. 9876543210"
-                  value={form.phone}
-                  onChange={e => update("phone", e.target.value)}
-                  maxLength={10}
-                />
+                <input style={inputStyle("phone")} placeholder="e.g. 9876543210" value={form.phone} onChange={e => update("phone", e.target.value)} maxLength={10} />
                 {errors.phone && <p style={errorStyle}>{errors.phone}</p>}
               </div>
 
               <div>
                 <label style={labelStyle}>Email Address <span style={{ color: "#94a3b8", fontWeight: 400 }}>(optional)</span></label>
-                <input
-                  style={inputStyle("email")}
-                  placeholder="e.g. rahul@email.com"
-                  value={form.email}
-                  onChange={e => update("email", e.target.value)}
-                />
+                <input style={inputStyle("email")} placeholder="e.g. rahul@email.com" value={form.email} onChange={e => update("email", e.target.value)} />
                 {errors.email && <p style={errorStyle}>{errors.email}</p>}
               </div>
 
               <div>
                 <label style={labelStyle}>Your Area *</label>
-                <select
-                  style={inputStyle("area")}
-                  value={form.area}
-                  onChange={e => update("area", e.target.value)}
-                >
+                <select style={inputStyle("area")} value={form.area} onChange={e => update("area", e.target.value)}>
                   <option value="">-- Select your area --</option>
-                  {HYDERABAD_AREAS.map(a => (
-                    <option key={a} value={a}>{a}</option>
-                  ))}
+                  {HYDERABAD_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
                 {errors.area && <p style={errorStyle}>{errors.area}</p>}
               </div>
 
-              <button
-                onClick={handleNext}
-                style={{ padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 8 }}>
+              <button onClick={handleNext} style={{ padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 8 }}>
                 Continue →
               </button>
             </div>
           )}
 
-          {/* Step 2 — Security */}
+          {/* Step 2 */}
           {step === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Set Up Security</h2>
@@ -227,65 +204,39 @@ export default function Register() {
 
               <div>
                 <label style={labelStyle}>Password *</label>
-                <input
-                  type="password"
-                  style={inputStyle("password")}
-                  placeholder="Minimum 8 characters"
-                  value={form.password}
-                  onChange={e => update("password", e.target.value)}
-                />
+                <input type="password" style={inputStyle("password")} placeholder="Minimum 8 characters" value={form.password} onChange={e => update("password", e.target.value)} />
                 {errors.password && <p style={errorStyle}>{errors.password}</p>}
               </div>
 
               <div>
                 <label style={labelStyle}>Confirm Password *</label>
-                <input
-                  type="password"
-                  style={inputStyle("confirmPassword")}
-                  placeholder="Re-enter your password"
-                  value={form.confirmPassword}
-                  onChange={e => update("confirmPassword", e.target.value)}
-                />
+                <input type="password" style={inputStyle("confirmPassword")} placeholder="Re-enter your password" value={form.confirmPassword} onChange={e => update("confirmPassword", e.target.value)} />
                 {errors.confirmPassword && <p style={errorStyle}>{errors.confirmPassword}</p>}
               </div>
 
               <div>
                 <label style={labelStyle}>Aadhaar Number *</label>
-                <input
-                  style={inputStyle("aadhaar")}
-                  placeholder="12-digit Aadhaar number"
-                  value={form.aadhaar}
-                  onChange={e => update("aadhaar", e.target.value.replace(/\D/g, ""))}
-                  maxLength={12}
-                />
+                <input style={inputStyle("aadhaar")} placeholder="12-digit Aadhaar number" value={form.aadhaar} onChange={e => update("aadhaar", e.target.value.replace(/\D/g, ""))} maxLength={12} />
                 {errors.aadhaar && <p style={errorStyle}>{errors.aadhaar}</p>}
-                <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
-                  Used only for identity verification. We never store your Aadhaar number.
-                </p>
+                <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Used only for identity verification. We never store your Aadhaar number.</p>
               </div>
 
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button
-                  onClick={() => setStep(1)}
-                  style={{ flex: 1, padding: "12px", background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                <button onClick={() => setStep(1)} style={{ flex: 1, padding: "12px", background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                   ← Back
                 </button>
-                <button
-                  onClick={handleNext}
-                  style={{ flex: 2, padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={handleNext} style={{ flex: 2, padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
                   Continue →
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step 3 — OTP Verification */}
+          {/* Step 3 */}
           {step === 3 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Aadhaar Verification</h2>
-              <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 8px" }}>
-                Verify your identity to prevent fake complaints
-              </p>
+              <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 8px" }}>Verify your identity to prevent fake complaints</p>
 
               <div style={{ background: "#f0f9ff", borderRadius: 10, padding: 16, border: "1px solid #bae6fd" }}>
                 <p style={{ fontSize: 13, color: "#0369a1", margin: 0 }}>
@@ -295,10 +246,7 @@ export default function Register() {
               </div>
 
               {!otpSent ? (
-                <button
-                  onClick={handleSendOTP}
-                  disabled={loading}
-                  style={{ padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={handleSendOTP} disabled={loading} style={{ padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
               ) : (
@@ -310,29 +258,18 @@ export default function Register() {
                   </div>
                   <div>
                     <label style={labelStyle}>Enter OTP *</label>
-                    <input
-                      style={inputStyle("otp")}
-                      placeholder="Enter 4-digit OTP"
-                      value={form.otp}
-                      onChange={e => update("otp", e.target.value.replace(/\D/g, ""))}
-                      maxLength={6}
-                    />
+                    <input style={inputStyle("otp")} placeholder="Enter 4-digit OTP" value={form.otp} onChange={e => update("otp", e.target.value.replace(/\D/g, ""))} maxLength={6} />
                     {errors.otp && <p style={errorStyle}>{errors.otp}</p>}
                   </div>
                 </>
               )}
 
               <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-                <button
-                  onClick={() => setStep(2)}
-                  style={{ flex: 1, padding: "12px", background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                <button onClick={() => setStep(2)} style={{ flex: 1, padding: "12px", background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                   ← Back
                 </button>
                 {otpSent && (
-                  <button
-                    onClick={handleRegister}
-                    disabled={loading}
-                    style={{ flex: 2, padding: "12px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={handleRegister} disabled={loading} style={{ flex: 2, padding: "12px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
                     {loading ? "Creating Account..." : "Create Account ✓"}
                   </button>
                 )}
@@ -349,9 +286,7 @@ export default function Register() {
         {/* Login Link */}
         <p style={{ textAlign: "center", fontSize: 14, color: "#64748b", marginTop: 20 }}>
           Already have an account?{" "}
-          <span
-            onClick={() => navigate("/login")}
-            style={{ color: "#0ea5e9", fontWeight: 600, cursor: "pointer" }}>
+          <span onClick={() => navigate("/login")} style={{ color: "#0ea5e9", fontWeight: 600, cursor: "pointer" }}>
             Login here
           </span>
         </p>

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
@@ -18,12 +18,15 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public routes - no navbar, no protection */}
+          {/* Redirect root to login */}
+          <Route path="/" element={<Navigate to="/login" />} />
+
+          {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected routes - require login */}
-          <Route path="/" element={
+          {/* Protected routes */}
+          <Route path="/home" element={
             <ProtectedRoute>
               <Navbar />
               <Home />
