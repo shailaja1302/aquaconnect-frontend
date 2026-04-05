@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { authAPI } from "../services/api";
+import { authAPI } from "../services/Api";
 
 const HYDERABAD_AREAS = [
   "Kukatpally", "Madhapur", "Ameerpet", "KPHB",

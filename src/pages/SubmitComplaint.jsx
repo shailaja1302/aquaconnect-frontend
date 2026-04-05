@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-import { complaintAPI } from "../services/api";
+import { complaintAPI } from "../services/Api";
 
 const COMPLAINT_TYPES = ["Shortage", "Leakage", "Contamination", "Low Pressure", "Other"];
 const HYDERABAD_AREAS = ["Kukatpally", "Madhapur", "Ameerpet", "KPHB", "Gachibowli", "Hitech City", "Banjara Hills"];
