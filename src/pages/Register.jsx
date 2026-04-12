@@ -53,6 +53,7 @@ export default function Register() {
       return;
     }
     setLoading(true);
+    // Simulating OTP send - for production, you'd call authAPI.sendOTP
     setTimeout(() => {
       setOtpSent(true);
       setLoading(false);
@@ -71,18 +72,25 @@ export default function Register() {
     }
     setLoading(true);
     try {
+      // FIX APPLIED: Using 'aadhaar_number' to match Backend DB column
       const res = await authAPI.register({
         name: form.name,
         phone: form.phone,
         email: form.email,
         password: form.password,
         area: form.area,
-        aadhaar: form.aadhaar
+        aadhaar_number: form.aadhaar 
       });
-      login(res.data.user, res.data.token);
-      navigate("/home");
+      
+      if (res.data.token) {
+        login(res.data.user, res.data.token);
+        navigate("/home");
+      }
     } catch (err) {
-      setErrors({ otp: err.response?.data?.message || "Registration failed. Try again." });
+        // Detailed error logging to help us debug
+        console.error("Registration Error:", err.response?.data);
+        const serverMessage = err.response?.data?.message || "Registration failed. Please check your details.";
+        setErrors({ otp: serverMessage });
     } finally {
       setLoading(false);
     }
@@ -218,7 +226,7 @@ export default function Register() {
                 <label style={labelStyle}>Aadhaar Number *</label>
                 <input style={inputStyle("aadhaar")} placeholder="12-digit Aadhaar number" value={form.aadhaar} onChange={e => update("aadhaar", e.target.value.replace(/\D/g, ""))} maxLength={12} />
                 {errors.aadhaar && <p style={errorStyle}>{errors.aadhaar}</p>}
-                <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Used only for identity verification. We never store your Aadhaar number.</p>
+                <p style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Used only for identity verification.</p>
               </div>
 
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
@@ -236,18 +244,18 @@ export default function Register() {
           {step === 3 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Aadhaar Verification</h2>
-              <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 8px" }}>Verify your identity to prevent fake complaints</p>
+              <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 8px" }}>Verify your identity</p>
 
               <div style={{ background: "#f0f9ff", borderRadius: 10, padding: 16, border: "1px solid #bae6fd" }}>
                 <p style={{ fontSize: 13, color: "#0369a1", margin: 0 }}>
-                  OTP will be sent to the mobile number linked with Aadhaar ending in
+                  OTP will be sent to mobile linked with Aadhaar ending in
                   <strong> XXXX{form.aadhaar.slice(-4)}</strong>
                 </p>
               </div>
 
               {!otpSent ? (
                 <button onClick={handleSendOTP} disabled={loading} style={{ padding: "12px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-                  {loading ? "Sending OTP..." : "Send OTP"}
+                  {loading ? "Sending..." : "Send OTP"}
                 </button>
               ) : (
                 <>
@@ -258,7 +266,7 @@ export default function Register() {
                   </div>
                   <div>
                     <label style={labelStyle}>Enter OTP *</label>
-                    <input style={inputStyle("otp")} placeholder="Enter 4-digit OTP" value={form.otp} onChange={e => update("otp", e.target.value.replace(/\D/g, ""))} maxLength={6} />
+                    <input style={inputStyle("otp")} placeholder="Enter 4-digit OTP" value={form.otp} onChange={e => update("otp", e.target.value.replace(/\D/g, ""))} maxLength={4} />
                     {errors.otp && <p style={errorStyle}>{errors.otp}</p>}
                   </div>
                 </>
@@ -274,10 +282,6 @@ export default function Register() {
                   </button>
                 )}
               </div>
-
-              <p style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", margin: 0 }}>
-                By registering, you agree to use this platform only for genuine water complaints.
-              </p>
             </div>
           )}
 
